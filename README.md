@@ -2,12 +2,12 @@ This is a template. For "how to make a linter", please check [the HOWTO](HOWTO.m
 
 -----------------------------------------------------------------
 
-SublimeLinter-contrib-phpstan
+SublimeLinter-phpstan
 ================================
 
-[![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-phpstan.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-phpstan)
+[![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan)
 
-This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [phpstan](__linter_homepage__). It will be used with files that have the “__syntax__” syntax.
+This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [phpstan](https://github.com/phpstan/phpstan).
 
 ## Installation
 SublimeLinter must be installed in order to use this plugin.
@@ -16,6 +16,7 @@ Please use [Package Control](https://packagecontrol.io) to install the linter pl
 
 Before installing this plugin, you must ensure that `phpstan` is installed on your system.
 
+Its suggested to install PHPStan globally with composer.
 ```
 composer global require phpstan/phpstan-shim
 ```
