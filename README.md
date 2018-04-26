@@ -1,7 +1,7 @@
 SublimeLinter-contrib-phpstan
 ================================
 
-[![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan)
+[![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-phpstan.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-phpstan)
 
 This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [phpstan](https://github.com/phpstan/phpstan).
 
@@ -23,7 +23,7 @@ In order for `phpstan` to be executed by SublimeLinter, you must ensure that its
 - SublimeLinter settings: http://sublimelinter.readthedocs.org/en/latest/settings.html
 - Linter settings: http://sublimelinter.readthedocs.org/en/latest/linter_settings.html
 
-Additional SublimeLinter-phpstan settings:
+Additional SublimeLinter-contrib-phpstan settings:
 
 |Setting|Description    |
 |:------|:--------------|
