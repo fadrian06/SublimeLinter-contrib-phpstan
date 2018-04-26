@@ -1,4 +1,4 @@
-SublimeLinter-phpstan
+SublimeLinter-contrib-phpstan
 ================================
 
 [![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan)
