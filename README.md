@@ -23,8 +23,10 @@ In order for `phpstan` to be executed by SublimeLinter, you must ensure that its
 - SublimeLinter settings: http://sublimelinter.readthedocs.org/en/latest/settings.html
 - Linter settings: http://sublimelinter.readthedocs.org/en/latest/linter_settings.html
 
+<!---
 Additional SublimeLinter-phpstan settings:
 
 |Setting|Description    |
 |:------|:--------------|
-|||
+|level |The analysis level passed to PHPStan |
+--->
