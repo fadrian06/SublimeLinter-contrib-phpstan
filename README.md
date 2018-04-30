@@ -12,7 +12,7 @@ Please use [Package Control](https://packagecontrol.io) to install the linter pl
 
 Before installing this plugin, you must ensure that `phpstan` is installed on your system.
 
-Its suggested to install PHPStan globally with composer.
+Its suggested to install [PHPStan](https://github.com/phpstan/phpstan-shim) globally with composer.
 ```
 composer global require phpstan/phpstan-shim
 ```
