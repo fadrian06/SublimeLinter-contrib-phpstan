@@ -1,9 +1,10 @@
 SublimeLinter-contrib-phpstan
 ================================
 
-[![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-phpstan.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-contrib-phpstan)
+[![Build Status](https://travis-ci.org/Rockstar04/SublimeLinter-contrib-phpstan.svg?branch=master)](https://travis-ci.org/Rockstar04/SublimeLinter-contrib-phpstan)
+[![Downloads](https://packagecontrol.herokuapp.com/downloads/SublimeLinter-contrib-phpstan.svg)](https://packagecontrol.io/packages/SublimeLinter-contrib-phpstan)
 
-This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [phpstan](https://github.com/phpstan/phpstan).
+This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [phpstan](https://github.com/phpstan/phpstan). This plugin is currently very basic, and pull requests to expand its functionality and configurability are welcome.
 
 ## Installation
 SublimeLinter must be installed in order to use this plugin.
@@ -12,7 +13,7 @@ Please use [Package Control](https://packagecontrol.io) to install the linter pl
 
 Before installing this plugin, you must ensure that `phpstan` is installed on your system.
 
-Its suggested to install PHPStan globally with composer.
+Its suggested to install [PHPStan](https://github.com/phpstan/phpstan-shim) globally with composer.
 ```
 composer global require phpstan/phpstan-shim
 ```
@@ -27,4 +28,4 @@ Additional SublimeLinter-contrib-phpstan settings:
 
 |Setting|Description    |
 |:------|:--------------|
-|||
+|level |The analysis level passed to PHPStan (Default: max)|
