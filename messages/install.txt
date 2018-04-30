@@ -1,6 +1,4 @@
-SublimeLinter-contrib-phpstan
--------------------------------
-This linter plugin for SublimeLinter provides an interface to the PHP static analysis tool phpstan.
+This linter plugin for SublimeLinter provides an interface to phpstan. This plugin is currently very basic, and pull requests to expand its functionality and configurability are welcome.
 
-For more information, please see:
+You must have PHPStan avaliable in your path. For more information, please see:
 https://github.com/Rockstar04/SublimeLinter-contrib-phpstan
