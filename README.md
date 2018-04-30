@@ -1,7 +1,8 @@
 SublimeLinter-contrib-phpstan
 ================================
 
-[![Build Status](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan.svg?branch=master)](https://travis-ci.org/SublimeLinter/SublimeLinter-phpstan)
+[![Build Status](https://travis-ci.org/Rockstar04/SublimeLinter-contrib-phpstan.svg?branch=master)](https://travis-ci.org/Rockstar04/SublimeLinter-contrib-phpstan)
+[![Downloads](https://packagecontrol.herokuapp.com/downloads/SublimeLinter-contrib-phpstan.svg)](https://packagecontrol.io/packages/SublimeLinter-contrib-phpstan)
 
 This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [phpstan](https://github.com/phpstan/phpstan). This plugin is currently very basic, and pull requests to expand its functionality and configurability are welcome.
 
