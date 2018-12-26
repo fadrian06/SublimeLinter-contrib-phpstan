@@ -1,7 +1,13 @@
 from os import path
 from shlex import quote
+import logging
+import re
 
 from SublimeLinter.lint import Linter
+
+logger = logging.getLogger("SublimeLinter.plugins.phpstan")
+
+AUTOLOAD_OPT_RE = re.compile(r"(-a|--autoload-file)\b")
 
 
 class PhpStan(Linter):
@@ -24,9 +30,31 @@ class PhpStan(Linter):
         if settings.get("use_composer_autoload", True):
             autoload_file = self.find_autoload_php(self.view.file_name())
             if autoload_file:
+                if any(self.autoload_opts(settings)):
+                    logger.error(
+                        "Composer autoload-file conflicts with PHPStan user setting.\n"
+                        'Disable "use_composer_autoload" or remove "{}" from "args".'.format(
+                            '", and "'.join(self.autoload_opts(settings))
+                        )
+                    )
+                    self.notify_failure()
+                    return []
+
                 opts.append("--autoload-file={}".format(quote(autoload_file)))
 
         return cmd + opts + ["${args}", "--", "${file}"]
+
+    def get_cmd(self):
+        # We need to patch `get_cmd` to handle empty return values from `cmd`.
+        cmd = self.cmd()
+        return self.build_cmd(cmd) if cmd else []
+
+    def autoload_opts(self, settings):
+        return (
+            setting
+            for setting in self.get_user_args(settings)
+            if AUTOLOAD_OPT_RE.match(setting)
+        )
 
     def find_autoload_php(self, file_path):
         basedir = None
