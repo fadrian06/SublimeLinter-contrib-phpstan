@@ -5,7 +5,7 @@ class PhpStan(Linter):
     cmd = (
         "phpstan",
         "analyse",
-        "--errorFormat=raw",
+        "--error-format=raw",
         "--no-progress",
         "${args}",
         "${file}",
