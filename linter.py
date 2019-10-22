@@ -22,7 +22,7 @@ class PhpStan(Linter):
     }
 
     def cmd(self):
-        settings = self.get_view_settings()
+        settings = self.settings
 
         cmd = ["phpstan", "analyse"]
         opts = ["--error-format=raw", "--no-progress"]
