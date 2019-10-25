@@ -3,22 +3,23 @@ from shlex import quote
 import logging
 import re
 
-from SublimeLinter.lint import Linter
+from SublimeLinter import lint
 
 logger = logging.getLogger("SublimeLinter.plugins.phpstan")
 
 AUTOLOAD_OPT_RE = re.compile(r"(-a|--autoload-file)\b")
 
 
-class PhpStan(Linter):
+class PhpStan(lint.Linter):
     regex = r"^(?!Note: ).*:(?P<line>[0-9]+):(?P<message>.+)"
+    error_stream = lint.STREAM_STDOUT
     default_type = "error"
     multiline = False
     tempfile_suffix = "-"
     defaults = {
         "selector": "source.php",
         "use_composer_autoload": True,
-        "--level": "max",
+        "--level": "max"
     }
 
     def cmd(self):
@@ -41,8 +42,7 @@ class PhpStan(Linter):
                     return []
 
                 opts.append("--autoload-file={}".format(quote(autoload_file)))
-
-        return cmd + opts + ["${args}", "--", "${file}"]
+        return cmd + opts + ["${args}",  "--", "${file}"]
 
     def get_cmd(self):
         # We need to patch `get_cmd` to handle empty return values from `cmd`.
