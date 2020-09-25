@@ -8,7 +8,8 @@ from SublimeLinter import lint
 logger = logging.getLogger("SublimeLinter.plugins.phpstan")
 
 AUTOLOAD_OPT_RE = re.compile(r"(-a|--autoload-file)\b")
-
+LEVEL_PROJECT_RE = re.compile(r"level: (.+)")
+LEVEL_GLOBAL_RE = re.compile(r"--level=(.+)")
 
 class PhpStan(lint.Linter):
     regex = r"^(?!Note: ).*:(?P<line>[0-9]+):(?P<message>.+)"
@@ -18,8 +19,7 @@ class PhpStan(lint.Linter):
     tempfile_suffix = "-"
     defaults = {
         "selector": "source.php",
-        "use_composer_autoload": True,
-        "--level": "max"
+        "use_composer_autoload": True
     }
 
     def cmd(self):
@@ -27,6 +27,17 @@ class PhpStan(lint.Linter):
 
         cmd = ["phpstan", "analyse"]
         opts = ["--error-format=raw", "--no-progress"]
+
+        level = self.get_project_level()
+
+        if (level):
+            if (self.has_global_level()):
+                logger.error(
+                    "Level configured in PHPStan linter overrides project level!\n"
+                    "Remove --level from args in global configuration to use project level."
+                )
+            else:
+                opts.append("--level={level}".format(level=level))
 
         if settings.get("use_composer_autoload", True):
             autoload_file = self.find_autoload_php(self.view.file_name())
@@ -69,4 +80,37 @@ class PhpStan(lint.Linter):
                 return autoload
             if basedir == file_path:
                 break
+            file_path = basedir
+
+    # Project defined configuration (phpstan.neon or phpstan.neon.dist)
+    def get_project_level(self):
+        configPath = self.find_phpstan_configuration(self.view.file_name())
+
+        if (configPath):
+            with open(configPath) as f:
+                config = f.read()
+                match = re.search(LEVEL_PROJECT_RE, config)
+
+                if (match):
+                    return match.group(1)
+
+    def has_global_level(self):
+        return filter(LEVEL_GLOBAL_RE.search, self.get_user_args(self.settings))
+
+    def find_phpstan_configuration(self, file_path):
+        basedir = None
+        while file_path:
+            basedir = path.dirname(file_path)
+            configFiles = (
+                "{basedir}/phpstan.neon".format(basedir=basedir),
+                "{basedir}/phpstan.neon.dist".format(basedir=basedir),
+            )
+
+            for configFile in configFiles:
+                if (path.isfile(configFile)):
+                    return configFile
+
+            if (basedir == file_path):
+                break
+
             file_path = basedir
