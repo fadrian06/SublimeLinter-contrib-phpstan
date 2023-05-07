@@ -31,13 +31,7 @@ class PhpStan(lint.Linter):
         level = self.get_project_level()
 
         if (level):
-            if (self.has_global_level()):
-                logger.error(
-                    "Level configured in PHPStan linter overrides project level!\n"
-                    "Remove --level from args in global configuration to use project level."
-                )
-            else:
-                opts.append("--level={level}".format(level=level))
+            opts.append("--level={level}".format(level=level))
 
         if settings.get("use_composer_autoload", True):
             autoload_file = self.find_autoload_php(self.view.file_name())
@@ -53,7 +47,8 @@ class PhpStan(lint.Linter):
                     return []
 
                 opts.append("--autoload-file={}".format(quote(autoload_file)))
-        return cmd + opts + ["${args}", "--", "${file}"]
+
+        return cmd + ["${args}"] + opts + ["--", "${file}"]
 
     def get_cmd(self):
         # We need to patch `get_cmd` to handle empty return values from `cmd`.
