@@ -19,6 +19,7 @@ class PhpStan(lint.Linter):
     multiline = False
     tempfile_suffix = "-"
     defaults = {
+        "enable_cells": True,
         "selector": "source.php",
         "use_composer_autoload": True
     }
