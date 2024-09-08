@@ -52,6 +52,8 @@ class PhpStan(lint.Linter):
 
                 opts.append("--autoload-file={}".format(quote(autoload_file)))
 
+                cmd[0] = autoload_file.replace("/autoload.php", "/bin/phpstan")
+
         return cmd + ["${args}"] + opts + ["--", "${file}"]
 
     def get_cmd(self):
