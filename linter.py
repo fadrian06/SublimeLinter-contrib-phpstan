@@ -1,27 +1,26 @@
 from os import path
 from shlex import quote
 import logging
+import json
 
 from SublimeLinter import lint
 
 logger = logging.getLogger("SublimeLinter.plugins.phpstan")
 
 class PhpStan(lint.Linter):
-    regex = r"^(?!Note: ).*:(?P<line>[0-9]+):(?P<message>.+)"
+    regex = None
     error_stream = lint.STREAM_STDOUT
     default_type = "error"
     multiline = False
-    tempfile_suffix = "php"
+    tempfile_suffix = "-"
 
     defaults = {
-        "enable_cells": True,
-        "selector": "source.php",
-        "lint_mode": "background"
+        "selector": "embedding.php, source.php"
     }
 
     def cmd(self):
         cmd = ["phpstan", "analyse"]
-        opts = ["--error-format=raw", "--no-progress"]
+        opts = ["--error-format=json", "--no-progress"]
 
         configPath = self.find_phpstan_configuration(self.view.file_name())
 
@@ -62,3 +61,37 @@ class PhpStan(lint.Linter):
                 break
 
             file_path = basedir
+
+    def find_errors(self, output):
+        try:
+            content = json.loads(output)
+        except ValueError:
+            logger.error(
+                "JSON Decode error: We expected JSON from PHPStan, "
+                "but instead got this:\n{}\n\n"
+                .format(output)
+            )
+            self.notify_failure()
+            return
+
+        if 'files' not in content:
+            return
+
+        for file in content['files']:
+            for error in content['files'][file]['messages']:
+
+                error_message = error['message']
+
+                if 'tip' in error:
+                    tip = error['tip'].replace("•", "💡")
+                    error_message = error_message + "\n\n" + tip
+
+                yield lint.LintMatch(
+                    match=error,
+                    filename=file,
+                    line=error['line'] - 1,
+                    col=0,
+                    message=error_message,
+                    error_type='error',
+                    code='',
+                )
