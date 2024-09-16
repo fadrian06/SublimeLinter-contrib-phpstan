@@ -2,6 +2,7 @@ from os import path
 from shlex import quote
 import logging
 import json
+import re
 
 from SublimeLinter import lint
 
@@ -83,15 +84,146 @@ class PhpStan(lint.Linter):
                 error_message = error['message']
 
                 if 'tip' in error:
+                    # the character • is used for list in tips
                     tip = error['tip'].replace("•", "💡")
-                    error_message = error_message + "\n\n" + tip
+
+                    if not tip.startswith("💡"):
+                        tip = "💡 " + tip
+
+                    error_message = error_message + "\n" + tip
+
+                line_region = self.view.line(self.view.text_point(error['line'] - 1, 0))
+                line_content = self.view.substr(line_region)
+
+                stripped_line = line_content.lstrip()
+                leading_whitespace_length = len(line_content) - len(stripped_line)
+
+                # Highlight the whole line by default
+                key = self.extract_offset_key(error)
+                col = leading_whitespace_length
+                end_col = len(line_content)
+
+                if key:
+                    pattern = rf"{key}"
+                    # Check if key begins with $
+                    if key.startswith('$'):
+                        pattern = rf"\{key}"
+
+                    key_match = re.search(pattern, line_content)
+
+                    if key_match:
+                        # Compute the start and end columns
+                        col = key_match.start()
+                        end_col = key_match.end()
 
                 yield lint.LintMatch(
                     match=error,
                     filename=file,
                     line=error['line'] - 1,
-                    col=0,
+                    col=col,
+                    end_col=end_col,
                     message=error_message,
                     error_type='error',
                     code='',
                 )
+
+    def extract_offset_key(self, error):
+        error_message = error['message']
+
+        # "identifier": "offsetAccess.notFound"
+        if error['identifier'] == 'offsetAccess.notFound':
+            match = re.search(r"Offset '([^']+)'", error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'argument.type':
+            match = re.search(r'Parameter #\d+ \$(\w+) of method [\w\\]+::(\w+)\(\) expects .*, .+ given\.', error_message)
+            if match:
+                return match.group(2)
+
+            match = re.search(r'Method ([\w\\]+)::(\w+)\(\) is unused\.', error_message)
+            if match:
+                return match.group(2)
+
+        elif error['identifier'] == 'arguments.count':
+                match = re.search(r'Method [\w\\]+::(\w+)\(\) invoked with \d+ parameters, \d+ required\.', error_message)
+                if match:
+                    return match.group(1)
+
+        elif error['identifier'] == 'property.unused':
+            match = re.search(r'Property [\w\\]+::(\$\w+) is unused\.', error_message)
+            if match:
+                return match.group(1)
+
+            match = re.search(r'Static property ([\w\\]+)::(\$\w+) is unused\.', error_message)
+            if match:
+                return match.group(2)
+
+        elif error['identifier'] == 'property.notFound':
+            match = re.search(r'Access to an undefined property [\w\\]+::\$(\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'missingType.return':
+            match = re.search(r'Method ([\w\\]+)::(\w+)\(\) has no return type specified\.', error_message)
+            if match:
+                return match.group(2)
+
+        elif error['identifier'] == 'missingType.iterableValue':
+            match = re.search(r'Method [\w\\]+::\w+\(\) has parameter (\$\w+) with no value type specified in iterable type array\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'missingType.property':
+            match = re.search(r'Property [\w\\]+::(\$\w+) has no type specified\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'missingType.parameter':
+            match = re.search(r'Method [\w\\]+::\w+\(\) has parameter (\$\w+) with no type specified\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'method.unused':
+            match = re.search(r'Method ([\w\\]+)::(\w+)\(\) is unused\.', error_message)
+            if match:
+                return match.group(2)
+
+        elif error['identifier'] == 'method.notFound':
+            match = re.search(r'Call to an undefined method [\w\\]+::(\w+)\(\)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'constructor.unusedParameter':
+            match = re.search(r'Constructor of class [\w\\]+ has an unused parameter (\$\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'class.notFound':
+            match = re.search(r'Instantiated class [\w\\]+\\(\w+) not found\.', error_message)
+            if match:
+                return match.group(1)
+
+            match = re.search(r'Parameter \$\w+ of method [\w\\]+::\w+\(\) has invalid type (\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+            match = re.search(r'Call to method (\w+)\(\) on an unknown class (\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+            match = re.search(r'Method [\w\\]+::\w+\(\) has invalid return type (\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'assign.propertyReadOnly':
+            match = re.search(r'Property object\{[^}]*\bname: string\b[^}]*\}::\$(\w+) is not writable\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'constant.notFound':
+            match = re.search(r'Constant (\w+) not found\.', error_message)
+            if match:
+                return match.group(1)
+
+        return None

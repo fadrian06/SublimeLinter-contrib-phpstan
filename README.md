@@ -2,6 +2,9 @@ SublimeLinter-contrib-phpstan
 ================================
 
 This linter plugin for [SublimeLinter](https://github.com/SublimeLinter/SublimeLinter) provides an interface to [PHPStan](https://github.com/phpstan/phpstan).
+The code analysis is executed on the edited file when it is saved.
+
+![examples](screenshot.png)
 
 ## Installation
 SublimeLinter must be installed in order to use this plugin.
