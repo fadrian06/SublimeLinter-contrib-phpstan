@@ -34,6 +34,8 @@ class PhpStan(lint.Linter):
             opts.append("--autoload-file={}".format(quote(autoload_file)))
 
             cmd[0] = autoload_file.replace("/autoload.php", "/bin/phpstan")
+        else:
+            print("⚠️ Fallback on PHPStan installed globally")
 
         return cmd + ["${args}"] + opts + ["--", "${file}"]
 
@@ -130,7 +132,10 @@ class PhpStan(lint.Linter):
     def extract_offset_key(self, error):
         error_message = error['message']
 
-        # "identifier": "offsetAccess.notFound"
+        # If there is no identifier, we can't extract
+        if 'identifier' not in error:
+            return None
+
         if error['identifier'] == 'offsetAccess.notFound':
             match = re.search(r"Offset '([^']+)'", error_message)
             if match:
@@ -146,9 +151,13 @@ class PhpStan(lint.Linter):
                 return match.group(2)
 
         elif error['identifier'] == 'arguments.count':
-                match = re.search(r'Method [\w\\]+::(\w+)\(\) invoked with \d+ parameters, \d+ required\.', error_message)
-                if match:
-                    return match.group(1)
+            match = re.search(r'Method [\w\\]+::(\w+)\(\) invoked with \d+ parameters, \d+ required\.', error_message)
+            if match:
+                return match.group(1)
+
+            match = re.search(r'Static method (\w+::\w+)\(\) invoked with \d+ parameter', error_message)
+            if match:
+                return match.group(1)
 
         elif error['identifier'] == 'property.unused':
             match = re.search(r'Property [\w\\]+::(\$\w+) is unused\.', error_message)
@@ -200,6 +209,14 @@ class PhpStan(lint.Linter):
                 return match.group(1)
 
         elif error['identifier'] == 'class.notFound':
+            match = re.search(r'on an unknown class [\w\\]+\\(\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+            match = re.search(r'has unknown class [\w\\]+\\(\w+) as its type\.', error_message)
+            if match:
+                return match.group(1)
+
             match = re.search(r'Instantiated class [\w\\]+\\(\w+) not found\.', error_message)
             if match:
                 return match.group(1)
@@ -216,13 +233,51 @@ class PhpStan(lint.Linter):
             if match:
                 return match.group(1)
 
+            match = re.search(r'extends unknown class [\w\\]+\\(\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'classConstant.notFound':
+            match = re.search(r'(::\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
         elif error['identifier'] == 'assign.propertyReadOnly':
             match = re.search(r'Property object\{[^}]*\bname: string\b[^}]*\}::\$(\w+) is not writable\.', error_message)
             if match:
                 return match.group(1)
 
+        elif error['identifier'] == 'assign.propertyType':
+            match = re.search(r'does not accept [\w\\]+\\(\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
         elif error['identifier'] == 'constant.notFound':
             match = re.search(r'Constant (\w+) not found\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'function.notFound':
+            match = re.search(r'Function (\w+) not found\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'staticMethod.notFound':
+            match = re.search(r'undefined static method (\w+::\w+)\(\)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'variable.undefined':
+            match = re.search(r'Undefined variable: (\$\w+)', error_message)
+            if match:
+                return match.group(1)
+
+            match = re.search(r'Variable (\$\w+) might not be defined\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'interface.notFound':
+            match = re.search(r'implements unknown interface [\w\\]+\\(\w+)\.', error_message)
             if match:
                 return match.group(1)
 
