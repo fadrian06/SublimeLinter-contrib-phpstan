@@ -146,6 +146,10 @@ class PhpStan(lint.Linter):
             if match:
                 return match.group(2)
 
+            match = re.search(r'function (\w+)', error_message)
+            if match:
+                return match.group(1)
+
             match = re.search(r'Method ([\w\\]+)::(\w+)\(\) is unused\.', error_message)
             if match:
                 return match.group(2)
@@ -156,6 +160,11 @@ class PhpStan(lint.Linter):
                 return match.group(1)
 
             match = re.search(r'Static method (\w+::\w+)\(\) invoked with \d+ parameter', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'property.onlyWritten':
+            match = re.search(r'Property [\w\\]+::(\$\w+) is never read, only written\.', error_message)
             if match:
                 return match.group(1)
 
@@ -170,6 +179,11 @@ class PhpStan(lint.Linter):
 
         elif error['identifier'] == 'property.notFound':
             match = re.search(r'Access to an undefined property [\w\\]+::\$(\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'property.nonObject':
+            match = re.search(r'property \$([\w_]+) on mixed\.', error_message)
             if match:
                 return match.group(1)
 
@@ -196,7 +210,7 @@ class PhpStan(lint.Linter):
         elif error['identifier'] == 'method.unused':
             match = re.search(r'Method ([\w\\]+)::(\w+)\(\) is unused\.', error_message)
             if match:
-                return match.group(2)
+                return match.group(1)
 
         elif error['identifier'] == 'method.notFound':
             match = re.search(r'Call to an undefined method [\w\\]+::(\w+)\(\)\.', error_message)
@@ -257,13 +271,28 @@ class PhpStan(lint.Linter):
             if match:
                 return match.group(1)
 
+        elif error['identifier'] == 'function.nameCase':
+            match = re.search(r'incorrect case: (\w+)', error_message)
+            if match:
+                return match.group(1)
+
         elif error['identifier'] == 'function.notFound':
             match = re.search(r'Function (\w+) not found\.', error_message)
             if match:
                 return match.group(1)
 
+        elif error['identifier'] == 'function.strict':
+            match = re.search(r'Call to function (\w+)\(\)', error_message)
+            if match:
+                return match.group(1)
+
         elif error['identifier'] == 'staticMethod.notFound':
             match = re.search(r'undefined static method (\w+::\w+)\(\)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'staticMethod.void':
+            match = re.search(r'static method [\w\\]+::(\w+)\(\)', error_message)
             if match:
                 return match.group(1)
 
@@ -278,6 +307,21 @@ class PhpStan(lint.Linter):
 
         elif error['identifier'] == 'interface.notFound':
             match = re.search(r'implements unknown interface [\w\\]+\\(\w+)\.', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'isset.offset':
+            match = re.search(r'Offset \'(\w+)\' on array', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'staticProperty.notFound':
+            match = re.search(r'static property [\w\\]+::(\$\w+)', error_message)
+            if match:
+                return match.group(1)
+
+        elif error['identifier'] == 'return.phpDocType':
+            match = re.search(r'native type (\w+)', error_message)
             if match:
                 return match.group(1)
 
