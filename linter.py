@@ -28,14 +28,16 @@ class PhpStan(lint.Linter):
         if configPath:
             opts.append("--configuration={}".format(quote(configPath)))
 
-        autoload_file = self.find_autoload_php(configPath)
+            autoload_file = self.find_autoload_php(configPath)
 
-        if autoload_file:
-            opts.append("--autoload-file={}".format(quote(autoload_file)))
+            if autoload_file:
+                opts.append("--autoload-file={}".format(quote(autoload_file)))
 
-            cmd[0] = autoload_file.replace("/autoload.php", "/bin/phpstan")
+                cmd[0] = autoload_file.replace("/autoload.php", "/bin/phpstan")
+            else:
+                print("⚠️ Fallback on PHPStan installed globally")
         else:
-            print("⚠️ Fallback on PHPStan installed globally")
+            print("⚠️ phpstan.neon has not been found - Fallback on PHPStan installed globally")
 
         return cmd + ["${args}"] + opts + ["--", "${file}"]
 
