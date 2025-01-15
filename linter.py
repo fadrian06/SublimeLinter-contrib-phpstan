@@ -2,75 +2,34 @@ import json
 import logging
 import re
 from os import path
-from shlex import quote
 
 from SublimeLinter import lint
+from SublimeLinter.lint import ComposerLinter
 
 logger = logging.getLogger("SublimeLinter.plugins.phpstan")
 
 
-class PhpStan(lint.Linter):
-    regex = None
-    error_stream = lint.STREAM_STDOUT
-    default_type = "error"
-    multiline = False
-    tempfile_suffix = "-"
-
+class PhpStan(ComposerLinter):
     defaults = {
         "selector": "embedding.php, source.php"
     }
 
-    def cmd(self):
-        cmd = ["phpstan", "analyse"]
-        opts = ["--error-format=json", "--no-progress"]
+    def cmd(self) -> str:
+        cmd = "phpstan analyze ${file} --error-format=json --no-progress ${args}"
+        cwd = self.get_working_dir()
 
-        configPath = self.find_phpstan_configuration(self.view.file_name())
+        config_file_paths = (
+            f"{cwd}{path.sep}phpstan.neon",
+            f"{cwd}{path.sep}phpstan.neon.dist"
+        )
 
-        if configPath:
-            opts.append("--configuration={}".format(quote(configPath)))
+        for config_file_path in config_file_paths:
+            if path.exists(config_file_path):
+                cmd += " -c phpstan.neon"
 
-            autoload_file = self.find_autoload_php(configPath)
+        return cmd
 
-            if autoload_file:
-                opts.append("--autoload-file={}".format(quote(autoload_file)))
-
-                cmd[0] = autoload_file.replace("/autoload.php", "/bin/phpstan")
-            else:
-                print("⚠️ Fallback on PHPStan installed globally")
-        else:
-            print(
-                "⚠️ phpstan.neon has not been found - Fallback on PHPStan installed globally")
-
-        return cmd + ["${args}"] + opts + ["--", "${file}"]
-
-    def find_autoload_php(self, configPath):
-        pathAutoLoad = configPath.replace(
-            "/phpstan.neon", "/vendor/autoload.php")
-
-        if (path.isfile(pathAutoLoad)):
-            return pathAutoLoad
-
-        return None
-
-    def find_phpstan_configuration(self, file_path):
-        basedir = None
-        while file_path:
-            basedir = path.dirname(file_path)
-            configFiles = (
-                "{basedir}/phpstan.neon".format(basedir=basedir),
-                "{basedir}/phpstan.neon.dist".format(basedir=basedir),
-            )
-
-            for configFile in configFiles:
-                if (path.isfile(configFile)):
-                    return configFile
-
-            if (basedir == file_path):
-                break
-
-            file_path = basedir
-
-    def find_errors(self, output):
+    def find_errors(self, output: str):
         try:
             content = json.loads(output)
         except ValueError:
@@ -87,7 +46,6 @@ class PhpStan(lint.Linter):
 
         for file in content['files']:
             for error in content['files'][file]['messages']:
-
                 error_message = error['message']
 
                 if 'tip' in error:
@@ -136,229 +94,80 @@ class PhpStan(lint.Linter):
                     code='',
                 )
 
-    def extract_offset_key(self, error):
-        error_message = error['message']
+    def extract_offset_key(self, error: dict):
+        error_message = error.get('message', '')
 
-        # If there is no identifier, we can't extract
         if 'identifier' not in error:
             return None
 
-        if error['identifier'] == 'offsetAccess.notFound':
-            match = re.search(r"Offset '([^']+)'", error_message)
-            if match:
-                return match.group(1)
+        patterns = {
+            'offsetAccess.notFound': r"Offset '([^']+)'",
+            'argument.type': [
+                r'Parameter #\d+ \$(\w+) of method [\w\\]+::(\w+)\(\) expects .*, .+ given\.',
+                r'function (\w+)',
+                r'Method ([\w\\]+)::(\w+)\(\) is unused\.'
+            ],
+            'arguments.count': [
+                r'Method [\w\\]+::(\w+)\(\) invoked with \d+ parameters, \d+ required\.',
+                r'Static method (\w+::\w+)\(\) invoked with \d+ parameter'
+            ],
+            'property.onlyWritten': r'Property [\w\\]+::(\$\w+) is never read, only written\.',
+            'property.unused': [
+                r'Property [\w\\]+::(\$\w+) is unused\.',
+                r'Static property ([\w\\]+)::(\$\w+) is unused\.'
+            ],
+            'property.notFound': r'Access to an undefined property [\w\\]+::\$(\w+)\.',
+            'property.nonObject': r'property \$([\w_]+) on mixed\.',
+            'missingType.return': r'Method ([\w\\]+)::(\w+)\(\) has no return type specified\.',
+            'missingType.iterableValue': r'Method [\w\\]+::\w+\(\) has parameter (\$\w+) with no value type specified in iterable type array\.',
+            'missingType.property': r'Property [\w\\]+::(\$\w+) has no type specified\.',
+            'missingType.parameter': r'Method [\w\\]+::\w+\(\) has parameter (\$\w+) with no type specified\.',
+            'method.unused': r'Method ([\w\\]+)::(\w+)\(\) is unused\.',
+            'method.notFound': r'Call to an undefined method [\w\\]+::(\w+)\(\)\.',
+            'constructor.unusedParameter': r'Constructor of class [\w\\]+ has an unused parameter (\$\w+)\.',
+            'class.notFound': [
+                r'on an unknown class [\w\\]+\\(\w+)\.',
+                r'has unknown class [\w\\]+\\(\w+) as its type\.',
+                r'Instantiated class [\w\\]+\\(\w+) not found\.',
+                r'Parameter \$\w+ of method [\w\\]+::\w+\(\) has invalid type (\w+)\.',
+                r'Call to method (\w+)\(\) on an unknown class (\w+)\.',
+                r'Method [\w\\]+::\w+\(\) has invalid return type (\w+)\.',
+                r'extends unknown class [\w\\]+\\(\w+)\.'
+            ],
+            'classConstant.notFound': r'(::\w+)\.',
+            'assign.propertyReadOnly': r'Property object\{[^}]*\bname: string\b[^}]*\}::\$(\w+) is not writable\.',
+            'assign.propertyType': r'does not accept [\w\\]+\\(\w+)\.',
+            'constant.notFound': r'Constant (\w+) not found\.',
+            'function.nameCase': r'incorrect case: (\w+)',
+            'function.notFound': r'Function (\w+) not found\.',
+            'function.strict': r'Call to function (\w+)\(\)',
+            'staticMethod.notFound': r'undefined static method (\w+::\w+)\(\)\.',
+            'staticMethod.void': r'static method [\w\\]+::(\w+)\(\)',
+            'variable.undefined': [
+                r'Undefined variable: (\$\w+)',
+                r'Variable (\$\w+) might not be defined\.'
+            ],
+            'interface.notFound': r'implements unknown interface [\w\\]+\\(\w+)\.',
+            'isset.offset': r'Offset \'(\w+)\' on array',
+            'staticProperty.notFound': r'static property [\w\\]+::(\$\w+)',
+            'return.phpDocType': r'native type (\w+)'
+        }
 
-        elif error['identifier'] == 'argument.type':
-            match = re.search(
-                r'Parameter #\d+ \$(\w+) of method [\w\\]+::(\w+)\(\) expects .*, .+ given\.', error_message)
-            if match:
-                return match.group(2)
+        identifier = error['identifier']
 
-            match = re.search(r'function (\w+)', error_message)
-            if match:
-                return match.group(1)
+        if identifier in patterns:
+            pattern = patterns[identifier]
 
-            match = re.search(
-                r'Method ([\w\\]+)::(\w+)\(\) is unused\.', error_message)
-            if match:
-                return match.group(2)
+            if isinstance(pattern, list):
+                for pat in pattern:
+                    match = re.search(pat, error_message)
 
-        elif error['identifier'] == 'arguments.count':
-            match = re.search(
-                r'Method [\w\\]+::(\w+)\(\) invoked with \d+ parameters, \d+ required\.', error_message)
-            if match:
-                return match.group(1)
+                    if match:
+                        return match.group(1)
+            else:
+                match = re.search(pattern, error_message)
 
-            match = re.search(
-                r'Static method (\w+::\w+)\(\) invoked with \d+ parameter', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'property.onlyWritten':
-            match = re.search(
-                r'Property [\w\\]+::(\$\w+) is never read, only written\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'property.unused':
-            match = re.search(
-                r'Property [\w\\]+::(\$\w+) is unused\.', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'Static property ([\w\\]+)::(\$\w+) is unused\.', error_message)
-            if match:
-                return match.group(2)
-
-        elif error['identifier'] == 'property.notFound':
-            match = re.search(
-                r'Access to an undefined property [\w\\]+::\$(\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'property.nonObject':
-            match = re.search(r'property \$([\w_]+) on mixed\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'missingType.return':
-            match = re.search(
-                r'Method ([\w\\]+)::(\w+)\(\) has no return type specified\.', error_message)
-            if match:
-                return match.group(2)
-
-        elif error['identifier'] == 'missingType.iterableValue':
-            match = re.search(
-                r'Method [\w\\]+::\w+\(\) has parameter (\$\w+) with no value type specified in iterable type array\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'missingType.property':
-            match = re.search(
-                r'Property [\w\\]+::(\$\w+) has no type specified\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'missingType.parameter':
-            match = re.search(
-                r'Method [\w\\]+::\w+\(\) has parameter (\$\w+) with no type specified\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'method.unused':
-            match = re.search(
-                r'Method ([\w\\]+)::(\w+)\(\) is unused\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'method.notFound':
-            match = re.search(
-                r'Call to an undefined method [\w\\]+::(\w+)\(\)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'constructor.unusedParameter':
-            match = re.search(
-                r'Constructor of class [\w\\]+ has an unused parameter (\$\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'class.notFound':
-            match = re.search(
-                r'on an unknown class [\w\\]+\\(\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'has unknown class [\w\\]+\\(\w+) as its type\.', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'Instantiated class [\w\\]+\\(\w+) not found\.', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'Parameter \$\w+ of method [\w\\]+::\w+\(\) has invalid type (\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'Call to method (\w+)\(\) on an unknown class (\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'Method [\w\\]+::\w+\(\) has invalid return type (\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'extends unknown class [\w\\]+\\(\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'classConstant.notFound':
-            match = re.search(r'(::\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'assign.propertyReadOnly':
-            match = re.search(
-                r'Property object\{[^}]*\bname: string\b[^}]*\}::\$(\w+) is not writable\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'assign.propertyType':
-            match = re.search(
-                r'does not accept [\w\\]+\\(\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'constant.notFound':
-            match = re.search(r'Constant (\w+) not found\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'function.nameCase':
-            match = re.search(r'incorrect case: (\w+)', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'function.notFound':
-            match = re.search(r'Function (\w+) not found\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'function.strict':
-            match = re.search(r'Call to function (\w+)\(\)', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'staticMethod.notFound':
-            match = re.search(
-                r'undefined static method (\w+::\w+)\(\)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'staticMethod.void':
-            match = re.search(
-                r'static method [\w\\]+::(\w+)\(\)', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'variable.undefined':
-            match = re.search(r'Undefined variable: (\$\w+)', error_message)
-            if match:
-                return match.group(1)
-
-            match = re.search(
-                r'Variable (\$\w+) might not be defined\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'interface.notFound':
-            match = re.search(
-                r'implements unknown interface [\w\\]+\\(\w+)\.', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'isset.offset':
-            match = re.search(r'Offset \'(\w+)\' on array', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'staticProperty.notFound':
-            match = re.search(
-                r'static property [\w\\]+::(\$\w+)', error_message)
-            if match:
-                return match.group(1)
-
-        elif error['identifier'] == 'return.phpDocType':
-            match = re.search(r'native type (\w+)', error_message)
-            if match:
-                return match.group(1)
+                if match:
+                    return match.group(1)
 
         return None
