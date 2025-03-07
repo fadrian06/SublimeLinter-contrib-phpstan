@@ -20,12 +20,14 @@ class PhpStan(ComposerLinter):
 
         config_file_paths = (
             f"{cwd}{path.sep}phpstan.neon",
-            f"{cwd}{path.sep}phpstan.neon.dist"
+            f"{cwd}{path.sep}phpstan.neon.dist",
+            f"{cwd}{path.sep}phpstan.dist.neon",
         )
 
         for config_file_path in config_file_paths:
             if path.exists(config_file_path):
-                cmd += " -c phpstan.neon"
+                config_file_name = path.basename(config_file_path)
+                cmd += f" -c {config_file_name}"
 
         return cmd
 
